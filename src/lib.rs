@@ -59,7 +59,7 @@ mod test {
 
     #[test]
     fn test_encode() {
-        assert_eq!(encode("テスト"), "%E3%83%86%E3%82%B9%E3%83%88");
+        assert_eq!(encode("テ ス ト"), "%E3%83%86%20%E3%82%B9%20%E3%83%88");
     }
 
     #[test]
