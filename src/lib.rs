@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use std::str;
 
 pub fn encode(s: &str) -> String {
@@ -23,7 +24,7 @@ fn is_reserved(c: char) -> bool {
     ['-', '.', '_', '~'].contains(&c)
 }
 
-pub fn decode(s: &str) -> String {
+pub fn decode(s: &str) -> Result<String> {
     let mut res = String::new();
     let mut b = Vec::new();
     let mut u = String::new();
@@ -38,11 +39,11 @@ pub fn decode(s: &str) -> String {
             u.push(c);
         } else if latch {
             u.push(c);
-            b.push(u8::from_str_radix(u.as_ref(), 16).unwrap()); // FIXME
+            b.push(u8::from_str_radix(u.as_ref(), 16)?);
             u.clear();
             latch = false;
         } else if !b.is_empty() {
-            res.push_str(str::from_utf8(b.as_ref()).unwrap()); // FIXME
+            res.push_str(str::from_utf8(b.as_ref())?);
             res.push(c);
             b.clear();
         } else {
@@ -51,14 +52,14 @@ pub fn decode(s: &str) -> String {
     }
 
     if !u.is_empty() {
-        panic!(); // FIXME
+        return Err(anyhow!("Failed to decode percent-encoding string"));
     }
 
     if !b.is_empty() {
-        res.push_str(str::from_utf8(b.as_ref()).unwrap()); // FIXME
+        res.push_str(str::from_utf8(b.as_ref())?);
     }
 
-    res
+    Ok(res)
 }
 
 fn escape_with_parcent(c: char) -> String {
@@ -115,9 +116,9 @@ mod test {
 
     #[test]
     fn test_decode() {
-        assert_eq!(decode("abc"), "abc");
-        assert_eq!(decode("%25"), "%");
-        assert_eq!(decode("%20"), " ");
-        assert_eq!(decode("%E3%83%86%E3%82%B9%E3%83%88"), "テスト");
+        assert_eq!(decode("abc").unwrap(), "abc");
+        assert_eq!(decode("%25").unwrap(), "%");
+        assert_eq!(decode("%20").unwrap(), " ");
+        assert_eq!(decode("%E3%83%86%E3%82%B9%E3%83%88").unwrap(), "テスト");
     }
 }
