@@ -1,3 +1,5 @@
+use std::str;
+
 pub fn encode(s: &str) -> String {
     s.chars()
         .map(|c| match c {
@@ -19,6 +21,44 @@ pub fn url_encode(s: &str) -> String {
 
 fn is_reserved(c: char) -> bool {
     ['-', '.', '_', '~'].contains(&c)
+}
+
+pub fn decode(s: &str) -> String {
+    let mut res = String::new();
+    let mut b = Vec::new();
+    let mut u = String::new();
+    let mut latch = false;
+    for c in s.chars() {
+        if c == '%' {
+            latch = true;
+            continue;
+        }
+
+        if latch && u.is_empty() {
+            u.push(c);
+        } else if latch {
+            u.push(c);
+            b.push(u8::from_str_radix(u.as_ref(), 16).unwrap()); // FIXME
+            u.clear();
+            latch = false;
+        } else if !b.is_empty() {
+            res.push_str(str::from_utf8(b.as_ref()).unwrap()); // FIXME
+            res.push(c);
+            b.clear();
+        } else {
+            res.push(c);
+        }
+    }
+
+    if !u.is_empty() {
+        panic!(); // FIXME
+    }
+
+    if !b.is_empty() {
+        res.push_str(str::from_utf8(b.as_ref()).unwrap()); // FIXME
+    }
+
+    res
 }
 
 fn escape_with_parcent(c: char) -> String {
@@ -59,11 +99,25 @@ mod test {
 
     #[test]
     fn test_encode() {
-        assert_eq!(encode("テ ス ト"), "%E3%83%86%20%E3%82%B9%20%E3%83%88");
+        assert_eq!(encode("abc"), "abc");
+        assert_eq!(encode("%"), "%25");
+        assert_eq!(encode(" "), "%20");
+        assert_eq!(encode("テスト"), "%E3%83%86%E3%82%B9%E3%83%88");
     }
 
     #[test]
     fn test_url_encode() {
-        assert_eq!(url_encode("テ ス ト"), "%E3%83%86+%E3%82%B9+%E3%83%88");
+        assert_eq!(url_encode("abc"), "abc");
+        assert_eq!(url_encode("%"), "%25");
+        assert_eq!(url_encode(" "), "+");
+        assert_eq!(url_encode("テスト"), "%E3%83%86%E3%82%B9%E3%83%88");
+    }
+
+    #[test]
+    fn test_decode() {
+        assert_eq!(decode("abc"), "abc");
+        assert_eq!(decode("%25"), "%");
+        assert_eq!(decode("%20"), " ");
+        assert_eq!(decode("%E3%83%86%E3%82%B9%E3%83%88"), "テスト");
     }
 }
