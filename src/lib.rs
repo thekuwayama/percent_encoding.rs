@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Result};
 use std::str;
 
+const RESERVED_CHARS: [char; 4] = ['-', '.', '_', '~'];
+
 pub fn encode(s: &str) -> String {
     s.chars()
         .map(|c| match c {
@@ -21,7 +23,7 @@ pub fn url_encode(s: &str) -> String {
 }
 
 fn is_reserved(c: char) -> bool {
-    ['-', '.', '_', '~'].contains(&c)
+    RESERVED_CHARS.contains(&c)
 }
 
 fn escape_with_parcent(c: char) -> String {
@@ -47,6 +49,24 @@ pub fn decode(s: &str) -> Result<String> {
 
 pub fn url_decode(s: &str) -> Result<String> {
     do_decode(s.replace("+", " ").as_ref())
+}
+
+pub fn strict_decode(s: &str) -> Result<String> {
+    if s.chars().any(|c| !c.is_alphanumeric() && !is_reserved(c)) {
+        return Err(anyhow!("Failed to decode percent-encoding string"));
+    }
+
+    do_decode(s)
+}
+
+pub fn strict_url_decode(s: &str) -> Result<String> {
+    if s.chars()
+        .any(|c| !c.is_alphanumeric() && !is_reserved(c) && c != '+')
+    {
+        return Err(anyhow!("Failed to decode percent-encoding string"));
+    }
+
+    do_decode(s)
 }
 
 fn do_decode(s: &str) -> Result<String> {
@@ -136,5 +156,21 @@ mod test {
         assert_eq!(url_decode("%25").unwrap(), "%");
         assert_eq!(url_decode("+").unwrap(), " ");
         assert_eq!(url_decode("%E3%83%86%E3%82%B9%E3%83%88").unwrap(), "テスト");
+    }
+
+    #[test]
+    fn test_strict_decode() {
+        assert!(strict_decode("abc123").is_ok());
+        assert!(strict_decode(" ").is_err());
+        assert!(strict_decode("%").is_err());
+        assert!(strict_decode("+").is_err());
+    }
+
+    #[test]
+    fn test_strict_url_decode() {
+        assert!(strict_url_decode("abc123").is_ok());
+        assert!(strict_url_decode(" ").is_err());
+        assert!(strict_url_decode("%").is_err());
+        assert!(strict_url_decode("+").is_ok());
     }
 }
