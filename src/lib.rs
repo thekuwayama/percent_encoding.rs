@@ -24,7 +24,32 @@ fn is_reserved(c: char) -> bool {
     ['-', '.', '_', '~'].contains(&c)
 }
 
+fn escape_with_parcent(c: char) -> String {
+    let mut b = [0u8; 4];
+    c.encode_utf8(&mut b);
+
+    let mut res = String::new();
+    for u in &b[..c.len_utf8()] {
+        res.push('%');
+        res.push_str(format!("{:02X}", u).as_ref());
+    }
+
+    res
+}
+
+fn is_whitespace(c: char) -> bool {
+    c == ' '
+}
+
 pub fn decode(s: &str) -> Result<String> {
+    do_decode(s)
+}
+
+pub fn url_decode(s: &str) -> Result<String> {
+    do_decode(s.replace("+", " ").as_ref())
+}
+
+fn do_decode(s: &str) -> Result<String> {
     let mut res = String::new();
     let mut b = Vec::new();
     let mut u = String::new();
@@ -60,23 +85,6 @@ pub fn decode(s: &str) -> Result<String> {
     }
 
     Ok(res)
-}
-
-fn escape_with_parcent(c: char) -> String {
-    let mut b = [0u8; 4];
-    c.encode_utf8(&mut b);
-
-    let mut res = String::new();
-    for u in &b[..c.len_utf8()] {
-        res.push('%');
-        res.push_str(format!("{:02X}", u).as_ref());
-    }
-
-    res
-}
-
-fn is_whitespace(c: char) -> bool {
-    c == ' '
 }
 
 #[cfg(test)]
@@ -120,5 +128,13 @@ mod test {
         assert_eq!(decode("%25").unwrap(), "%");
         assert_eq!(decode("%20").unwrap(), " ");
         assert_eq!(decode("%E3%83%86%E3%82%B9%E3%83%88").unwrap(), "テスト");
+    }
+
+    #[test]
+    fn test_url_decode() {
+        assert_eq!(url_decode("abc").unwrap(), "abc");
+        assert_eq!(url_decode("%25").unwrap(), "%");
+        assert_eq!(url_decode("+").unwrap(), " ");
+        assert_eq!(url_decode("%E3%83%86%E3%82%B9%E3%83%88").unwrap(), "テスト");
     }
 }
