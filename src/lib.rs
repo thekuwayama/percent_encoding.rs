@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use std::str;
 
 const RESERVED_CHARS: [char; 4] = ['-', '.', '_', '~'];
+const FAILED_TO_DECODE: &str = "Failed to decode percent-encoding string";
 
 pub fn encode(s: &str) -> String {
     s.chars()
@@ -9,7 +10,7 @@ pub fn encode(s: &str) -> String {
             c if c.is_ascii_alphanumeric() || is_reserved(c) => c.to_string(),
             c => escape_with_parcent(c),
         })
-        .collect::<String>()
+        .collect()
 }
 
 pub fn url_encode(s: &str) -> String {
@@ -19,7 +20,7 @@ pub fn url_encode(s: &str) -> String {
             c if c.is_ascii_alphanumeric() || is_reserved(c) => c.to_string(),
             c => escape_with_parcent(c),
         })
-        .collect::<String>()
+        .collect()
 }
 
 fn is_reserved(c: char) -> bool {
@@ -53,7 +54,7 @@ pub fn url_decode(s: &str) -> Result<String> {
 
 pub fn strict_decode(s: &str) -> Result<String> {
     if s.chars().any(|c| !c.is_alphanumeric() && !is_reserved(c)) {
-        return Err(anyhow!("Failed to decode percent-encoding string"));
+        return Err(anyhow!(FAILED_TO_DECODE));
     }
 
     do_decode(s)
@@ -63,7 +64,7 @@ pub fn strict_url_decode(s: &str) -> Result<String> {
     if s.chars()
         .any(|c| !c.is_alphanumeric() && !is_reserved(c) && c != '+')
     {
-        return Err(anyhow!("Failed to decode percent-encoding string"));
+        return Err(anyhow!(FAILED_TO_DECODE));
     }
 
     do_decode(s)
@@ -97,7 +98,7 @@ fn do_decode(s: &str) -> Result<String> {
     }
 
     if !u.is_empty() {
-        return Err(anyhow!("Failed to decode percent-encoding string"));
+        return Err(anyhow!(FAILED_TO_DECODE));
     }
 
     if !b.is_empty() {
